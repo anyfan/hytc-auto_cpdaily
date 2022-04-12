@@ -12,7 +12,7 @@
 
 这里将加密算法搬了过来，将统一身份验证平台登录密码填入下框，即可获取加密后的密码。
 
-（如不能正常显示请在[https://docs.anyfan.top/#/hytc_sign](https://docs.anyfan.top/#/hytc_sign)打开此，或者在github下载此项目使用`index.html`获取）
+（如不能正常显示请在[https://docs.anyfan.top/#/hytc_sign](https://docs.anyfan.top/#/hytc_sign)打开，或者在[github](https://github.com/anyfan/hytc-auto_cpdaily)下载此项目使用`index.html`获取）
 
 <script>
     const app = Vue.createApp({
@@ -84,4 +84,4 @@ if ($tk=='hytc'){
 
 ## 其他
 
-> 上次检查可用性 `22-04-11`
+> 上次检查可用性 `22-04-12`
