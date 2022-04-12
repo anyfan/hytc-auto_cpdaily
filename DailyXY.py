@@ -1,144 +1,149 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# @Author : anyfan
+
+# 仅适用于淮阴师范学院（学生疫情信息收集—每日报平安）
+# 1. 如有相关旅居史、接触史及发热状况，请手动上传表单并向学校汇报，配合学校防疫工作。
+# 2. 所有内容禁止修改！造成相关防疫问责问题与作者无关。
+# 3. 只可自己使用，禁止代他人使用或他人代使用！
+# 4. 如不能遵守上述要求，请不要使用！
+# 4. 如不能遵守上述要求，请不要使用！
+
 import requests
 from urllib import parse
 import json
-import time
-import sys
 import datetime
-import io
 from bs4 import BeautifulSoup
-
-# 学号
-hytc_id = '*********'
-# 密码，自己手动获取，没精力去研究RSA算法了
-cas_pwd = '5bb1f6305536cd718cb68953485bd9da16a6304e84f9ad3bdfff969fc00fe2f011816e735b4a2e7dfee3e78103121c60f0bfd7137e2aede97237bb07edb1283c1640901c560601d5444b63fc71974fc6216e00d84675a907407748867d4d17bf34c89032cd9983d2ec3380326b19bce243ac123f208fe3c76d8aa6841e4ec54d'
+import sys
 
 
-def DailyXY():
-    # return_msg = {
-    #     "初始化": False,
-    #     "登陆身份验证系统": False,
-    #     "登陆办事大厅": False,
-    #     "取填报权限": False,
-    #     "获取用户信息": False,
-    #     "格式化数据": False,
-    #     "发送数据": False
-    # }
-    print('---------------------')
-    print('正在初始化')
-    print('---------------------')
-    # 身份验证的基本信息
-    login_data = {
-        'username': hytc_id,
-        'password': cas_pwd,
-        'captcha': '',
-        'warn': 'true',
-        'lt': 'LT-1962910-0dw9MjRybLU6d2xMKhtYcA2et6cVZh-cas01.example.org',
-        'execution': 'e4s1',
-        '_eventId': 'submit'
-    }
-
-    today = str(datetime.date.today())
-    # 每天上报的基本信息
-    mrqk_data = {
-        "WID": today+"-"+hytc_id,
-        "XSBH": hytc_id,
-        "TBSJ": today,
-        "BRJKZT_DISPLAY": "正常",
-        "BRJKZT": "1",
-        "SFJZ_DISPLAY": "否",
-        "SFJZ": "0",
-        "JTCYJKZK_DISPLAY": "正常",
-        "JTCYJKZK": "1",
-        "XLZK_DISPLAY": "正常",
-        "XLZK": "www",
-        "BY1": "0",
-        "QTQK": "",
-        "TW": "36.7"
-    }
-    # 构造Session
-    # 在session中发送登录请求，此后这个session里就存储了cookie。可以用print(session.cookies.get_dict())查看
-    session = requests.Session()
-
-    print('正在登陆身份验证系统')
-    print('---------------------')
-
-    # 身份验证域名
-    login_url = 'https://cas.hytc.edu.cn/lyuapServer/login?Service=ehall.hytc.edu.cn/new/index.html'
-
-    # 获取登陆所需的 lt，execution 值
-    resp = session.get(login_url)
-    login_html = BeautifulSoup(
-        resp.content, 'html.parser', from_encoding='utf-8')
-    login_data['lt'] = login_html.find(
-        'input', attrs={'name': 'lt'}).get('value')
-    login_data['execution'] = login_html.find(
-        'input', attrs={'name': 'execution'}).get('value')
-    # 登陆身份验证系统
-    resp = session.post(login_url, login_data)
-
-    print('正在登陆办事大厅')
-    print('---------------------')
-    # 登陆办事大厅,似乎可以初始化一部分cookie,不过这一步好像没什么卵用
-    resp = session.get(
-        'http://ehall.hytc.edu.cn/new/index.html#wechat_redirect')
-
-    print('正在获取填报权限')
-    print('---------------------')
-
-    # 'http://ehall.hytc.edu.cn/xsfw/sys/swpubapp/indexmenu/getAppConfig.do?appId=5811258723206966&appName=xsyqxxsjapp&v=09862829349213713'  #v=09862829349213713 怎么获取还不清楚,不过可以省略该参数。
-    resp = session.get(
-        'http://ehall.hytc.edu.cn/xsfw/sys/swpubapp/indexmenu/getAppConfig.do?appId=5811258723206966&appName=xsyqxxsjapp')
+class HytcCpDaily():
+    def __init__(self, hytc_id, cas_pwd):
+        # 在session中发送登录请求，此后这个session里就存储了cookie。可以用print(session.cookies.get_dict())查看
+        self.session = requests.Session()
+        self.RtMsg = '程序未正常运行'
+        self.hytc_id = hytc_id
+        self.cas_pwd = cas_pwd
 
 
-    print('正在获取用户信息')
-    print('---------------------')
-    # 获取基本信息
-    resp = session.get(
-        'http://ehall.hytc.edu.cn/xsfw/sys/xsyqxxsjapp/modules/mrbpa/mrbpabd.do')
-    jbxx_data = json.loads(resp.content)
-    jbxx_data = jbxx_data["datas"]["mrbpabd"]["rows"][0]
-
-    print('正在格式化数据')
-    print('---------------------')
-    # 格式化数据 str
-    jbxx_data = json.dumps(jbxx_data, ensure_ascii=False)
-    jbxx_data = jbxx_data.replace("null", "\"\"")
-    jbxx_data = jbxx_data.replace(" ", "")
-    mrqk_data = json.dumps(mrqk_data, ensure_ascii=False)
-    mrqk_data = mrqk_data.replace(" ", "")
-
-    # 拼接表单,并进行url编码,似乎不支持发送json
-    data = {
-        "JBXX": jbxx_data,
-        "MRQK": mrqk_data
-    }
-    data = json.dumps(data, ensure_ascii=False)
-    data = parse.quote(data, 'utf-8')
-    data = "data=" + data
-
-    print('正在发送数据')
-    print('---------------------')
-    headers = {
-        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
-    }
-    resp = session.post(
-        'http://ehall.hytc.edu.cn/xsfw/sys/xsyqxxsjapp/mrbpa/saveMrbpa.do', data, headers=headers)
-
-    result = json.loads(resp.content)
-    print(result['msg'])
-    print('---------------------')
-    return result['msg']
+    def HytcLogin(self):
+        # 身份验证平台
+        login_url = 'https://cas.hytc.edu.cn/lyuapServer/login'
+        login_data = {
+            'username': self.hytc_id,
+            'password': self.cas_pwd,
+            'captcha': '',
+            'warn': 'true',
+            'lt': 'LT-1962910-0dw9MjRybLU6d2xMKhtYcA2et6cVZh-cas01.example.org',
+            'execution': 'e4s1',
+            '_eventId': 'submit'
+        }
+        # 获取登陆所需的 lt，execution 值
+        resp = self.session.get(login_url)
+        login_html = BeautifulSoup(
+            resp.content, 'html.parser', from_encoding='utf-8')
+        login_data['lt'] = login_html.find(
+            'input', attrs={'name': 'lt'}).get('value')
+        login_data['execution'] = login_html.find(
+            'input', attrs={'name': 'execution'}).get('value')
+        # 登陆身份验证系统
+        resp = self.session.post(login_url, login_data)
+        #判断是否登陆成功
+        resp_tittle = BeautifulSoup(resp.text, 'html.parser').title.string
+        if resp_tittle == '主页(学生) - 淮阴师范学院门户':
+            self.RtMsg = '登陆成功'
+            return True
+        else:
+            self.RtMsg = '登陆错误，请检查账号密码'
+            return False
 
 
-# 这是本人的信息推送代码，可以删除，
-def send_msg():
-    msg = DailyXY()
-    msg = "每日疫情信息填报--->" + msg
-    url = "https://api.anyfan.top/work-wechat/?msg=" + msg
-    requests.get(url)
+    def JudgeToday(self):
+        # 判断是否已经填报
+        self.session .get(
+            'http://ehall.hytc.edu.cn/xsfw/sys/swpubapp/indexmenu/getAppConfig.do?appId=5811258723206966&appName=xsyqxxsjapp')
+        resp = self.session.get(
+            'http://ehall.hytc.edu.cn/xsfw/sys/swmxsyqxxsjapp/modules/mrbpa/judgeTodayHasData.do')
+        jude_data = json.loads(resp.content)["data"]
+        if len(jude_data):
+            self.RtMsg = '今天已经签到过了'
+            return False
+        else:
+            self.RtMsg = '正在签到'
+            return True
 
 
-send_msg()
+    def GetArchives(self):
+        # 获取基本信息
+        resp = self.session.get(
+            'http://ehall.hytc.edu.cn/xsfw/sys/xsyqxxsjapp/modules/mrbpa/mrbpabd.do')
+        stu_data = json.loads(resp.content)
+        if stu_data:
+            stu_data = stu_data["datas"]["mrbpabd"]["rows"][0]
+            print(stu_data)
+            # 格式化数据 str
+            stu_data = json.dumps(stu_data, ensure_ascii=False)
+            stu_data = stu_data.replace("null", "\"\"")
+            stu_data = stu_data.replace(" ", "")
+
+            today = str(datetime.date.today())
+            # 每天上报的基本信息
+            mrqk_data = {
+                "WID": "",
+                "XSBH": "",
+                "TBSJ": today,
+                "BRJKZT_DISPLAY": "正常",
+                "BRJKZT": "1",
+                "SFJZ_DISPLAY": "否",
+                "SFJZ": "0",
+                "JTCYJKZK_DISPLAY": "正常",
+                "JTCYJKZK": "1",
+                "XLZK_DISPLAY": "正常",
+                "XLZK": "www",
+                "BY1": "",
+                "QTQK": "",
+                "TW": "36.7"
+            }
+            mrqk_data = json.dumps(mrqk_data, ensure_ascii=False)
+            mrqk_data = mrqk_data.replace(" ", "")
+            # 拼接表单,并进行url编码
+            self.updata = {
+                "JBXX": stu_data,
+                "MRQK": mrqk_data
+            }
+            self.RtMsg = '获取信息成功'
+            return True
+        else:
+            self.RtMsg = '获取配置信息异常'
+            return False
+
+    def UpDaily(self):
+        up_data = json.dumps(self.updata, ensure_ascii=False)
+        up_data = parse.quote(up_data, 'utf-8')
+        up_data = "data=" + up_data
+        # print(up_data)
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
+        }
+        resp = self.session.post(
+            'http://ehall.hytc.edu.cn/xsfw/sys/xsyqxxsjapp/mrbpa/saveMrbpa.do', up_data, headers=headers)
+
+        result = json.loads(resp.content)
+        if result['msg'] == '成功':
+            self.RtMsg = '填报成功'
+        else:
+            self.RtMsg = '填报失败'
 
 
-# DailyXY()
+if __name__ == '__main__':
+    # 学号
+    hytc_id = sys.argv[1]
+    # 密码
+    cas_pwd = sys.argv[2]
+
+    app = HytcCpDaily(hytc_id=hytc_id, cas_pwd=cas_pwd)
+    if app.HytcLogin():
+        if app.JudgeToday():
+            if app.GetArchives():
+                app.UpDaily()
+    print(app.RtMsg)
